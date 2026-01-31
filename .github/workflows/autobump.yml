@@ -1,0 +1,53 @@
+name: Auto-bump cask
+
+on:
+  schedule:
+    - cron: "17 3 * * *"   # daily at 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: autobump
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Homebrew (if needed)
+        shell: bash
+        run: |
+          if ! command -v brew >/dev/null 2>&1; then
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            echo '/opt/homebrew/bin' >> "$GITHUB_PATH" || true
+            echo '/usr/local/bin' >> "$GITHUB_PATH" || true
+          fi
+
+      - name: Update Homebrew
+        run: |
+          brew update
+
+      - name: Bump cask if new release exists
+        env:
+          HOMEBREW_NO_ENV_HINTS: "1"
+        run: |
+          set -euo pipefail
+          brew bump-cask-pr --no-pull-requests --tap "$GITHUB_REPOSITORY" chargemonitor || true
+
+      - name: Push changes (if any)
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+          git status
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: bump chargemonitor cask"
+          git push
