@@ -35,60 +35,34 @@ jobs:
         run: |
           brew tap homebrew/cask || true
 
-      - name: Bump cask from latest GitHub release
+      - name: Bump cask from latest GitHub release (gh)
         env:
           GH_REPO: CrashSystemZ/ChargeMonitor
           ASSET_NAME: ChargeMonitor.dmg
           CASK_PATH: Casks/chargemonitor.rb
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
-          api() {
-            curl -fsSL \
-              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              -H "Accept: application/vnd.github+json" \
-              "$@"
-          }
-
-          echo "Fetching latest release for ${GH_REPO}..."
-          JSON="$(api "https://api.github.com/repos/${GH_REPO}/releases/latest")"
-
-          TAG="$(python3 - <<'PY'
-          import json,sys
-          j=json.loads(sys.stdin.read())
-          print(j["tag_name"])
-          PY
-          <<<"$JSON")"
-
+          echo "Fetching latest tag..."
+          TAG="$(gh api "repos/${GH_REPO}/releases/latest" --jq .tag_name)"
           VERSION="${TAG#v}"
-          URL="https://github.com/${GH_REPO}/releases/download/${TAG}/${ASSET_NAME}"
-
-          echo "Latest tag: $TAG"
-          echo "Asset URL:  $URL"
+          echo "Latest: $TAG (version $VERSION)"
 
           echo "Downloading asset..."
-          curl -fL \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-            -o "/tmp/${ASSET_NAME}" \
-            "$URL"
+          rm -f "/tmp/${ASSET_NAME}"
+          gh release download "$TAG" -R "$GH_REPO" -p "$ASSET_NAME" -O "/tmp/${ASSET_NAME}" --clobber
 
           SHA="$(shasum -a 256 "/tmp/${ASSET_NAME}" | awk '{print $1}')"
           echo "SHA256: $SHA"
 
-          echo "Updating cask file..."
+          echo "Updating cask..."
           python3 - <<PY
-          import re, pathlib, sys
+          import re, pathlib
           p = pathlib.Path("${CASK_PATH}")
           s = p.read_text()
-
-          version = "${VERSION}"
-          sha = "${SHA}"
-
-          s2 = re.sub(r'(^\\s*version\\s+\")[^\"]+(\"\\s*$)', rf'\\1{version}\\2', s, flags=re.M)
-          s2 = re.sub(r'(^\\s*sha256\\s+\")[^\"]+(\"\\s*$)', rf'\\1{sha}\\2', s2, flags=re.M)
-
+          s2 = re.sub(r'(^\s*version\s+\")[^\"]+(\"\s*$)', r'\1${VERSION}\2', s, flags=re.M)
+          s2 = re.sub(r'(^\s*sha256\s+\")[^\"]+(\"\s*$)', r'\1${SHA}\2', s2, flags=re.M)
           if s2 == s:
               print("No changes needed.")
           else:
