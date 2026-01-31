@@ -31,6 +31,10 @@ jobs:
         run: |
           brew update
 
+      - name: Ensure required taps
+        run: |
+          brew tap homebrew/cask || true
+
       - name: Bump cask if new release exists
         env:
           HOMEBREW_NO_ENV_HINTS: "1"
