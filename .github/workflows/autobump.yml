@@ -61,8 +61,8 @@ jobs:
           import re, pathlib
           p = pathlib.Path("${CASK_PATH}")
           s = p.read_text()
-          s2 = re.sub(r'(^\s*version\s+\")[^\"]+(\"\s*$)', r'\1${VERSION}\2', s, flags=re.M)
-          s2 = re.sub(r'(^\s*sha256\s+\")[^\"]+(\"\s*$)', r'\1${SHA}\2', s2, flags=re.M)
+          s2 = re.sub(r'(^\s*version\s+\")[^\"]+(\"\s*$)', r'\g<1>${VERSION}\g<2>', s, flags=re.M)
+          s2 = re.sub(r'(^\s*sha256\s+\")[^\"]+(\"\s*$)', r'\g<1>${SHA}\g<2>', s2, flags=re.M)
           if s2 == s:
               print("No changes needed.")
           else:
