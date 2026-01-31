@@ -35,12 +35,39 @@ jobs:
         run: |
           brew tap homebrew/cask || true
 
-      - name: Bump cask if new release exists
+      - name: Bump cask from latest GitHub release (no brew bump-cask-pr)
         env:
-          HOMEBREW_NO_ENV_HINTS: "1"
+          GH_REPO: CrashSystemZ/ChargeMonitor
+          ASSET_NAME: ChargeMonitor.dmg
+          CASK_PATH: Casks/chargemonitor.rb
         run: |
           set -euo pipefail
-          brew bump-cask-pr --write-only chargemonitor || true
+
+          TAG="$(curl -fsSL "https://api.github.com/repos/${GH_REPO}/releases/latest" | python3 -c 'import sys,json; print(json.load(sys.stdin)["tag_name"])')"
+          VERSION="${TAG#v}"
+
+          URL="https://github.com/${GH_REPO}/releases/download/${TAG}/${ASSET_NAME}"
+          curl -fL "$URL" -o /tmp/${ASSET_NAME}
+          SHA="$(shasum -a 256 /tmp/${ASSET_NAME} | awk '{print $1}')"
+
+          echo "Latest tag: $TAG"
+          echo "Version:    $VERSION"
+          echo "SHA256:     $SHA"
+
+          python3 - <<PY
+          import re, pathlib
+          p = pathlib.Path("${CASK_PATH}")
+          s = p.read_text()
+
+          s2 = re.sub(r'^\s*version\s+"[^"]+"\s*$', f'  version "{VERSION}"', s, flags=re.M)
+          s2 = re.sub(r'^\s*sha256\s+"[^"]+"\s*$', f'  sha256 "{SHA}"', s2, flags=re.M)
+
+          if s2 == s:
+              print("No changes needed in cask.")
+          else:
+              p.write_text(s2)
+              print("Cask updated.")
+          PY
 
       - name: Push changes (if any)
         run: |
