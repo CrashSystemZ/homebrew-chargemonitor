@@ -36,7 +36,7 @@ jobs:
           HOMEBREW_NO_ENV_HINTS: "1"
         run: |
           set -euo pipefail
-          brew bump-cask-pr --tap "$GITHUB_REPOSITORY" --write-only chargemonitor || true
+          brew bump-cask-pr --write-only chargemonitor || true
 
       - name: Push changes (if any)
         run: |
