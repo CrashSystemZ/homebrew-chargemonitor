@@ -1,6 +1,6 @@
 cask "chargemonitor" do
-  version "1.1.1"
-  sha256 "391759da25e328aaf2dca7a1589c0b72da0f8fd6ba387ef28b2ffa16d129961a"
+  version "1.2.0"
+  sha256 "d87573f86f35bf82244958e97146b04d24aa9311b7b31bebc8172a699c551cd4"
 
   url "https://github.com/CrashSystemZ/ChargeMonitor/releases/download/v#{version}/ChargeMonitor.dmg",
       verified: "github.com/CrashSystemZ/ChargeMonitor/"
